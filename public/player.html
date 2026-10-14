@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Dashboard</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 15px; margin: 0; }
+    .card { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+    input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: none; font-size: 1rem; box-sizing: border-box; }
+    input, select { background: #334155; color: white; }
+    button { background: #22c55e; color: white; font-weight: bold; cursor: pointer; }
+    .badge { background: #38bdf8; color: #0f172a; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- JOIN FORM -->
+  <div id="joinSection" class="card">
+    <h2>📱 Join Team Room</h2>
+    <label>Group / Team Name:</label>
+    <input type="text" id="groupName" placeholder="e.g. Apex Retailers">
+
+    <label>Level 1 Store Name:</label>
+    <input type="text" id="venueName" placeholder="e.g. Corner Market">
+
+    <label>Starting Strategy:</label>
+    <select id="startingOption">
+      <option value="A">Option A: $10M Scratch (Zero Traffic)</option>
+      <option value="B">Option B: $5M Established (High Traffic)</option>
+    </select>
+
+    <label>Your Role:</label>
+    <select id="role">
+      <option value="CEO">Player 1: CEO (Founder / Macro)</option>
+      <option value="Manager">Player 2: Manager (Co-Founder / Micro)</option>
+    </select>
+
+    <button onclick="joinGame()">ENTER GAME ROOM</button>
+  </div>
+
+  <!-- GAME DASHBOARD -->
+  <div id="gameDashboard" class="card hidden">
+    <div><span class="badge" id="roleBadge">ROLE</span> <b id="displayGroupName">Team</b></div>
+    <h3 id="displayVenueName">Store Name</h3>
+    
+    <hr style="border-color: #334155;">
+
+    <h4>💰 Financial Overview</h4>
+    <p>Net Worth: <b id="netWorth">$0</b></p>
+    <p>Cash on Hand: <span id="cash">$0</span></p>
+
+    <hr style="border-color: #334155;">
+
+    <h4>⚡ Quick Actions</h4>
+    <button onclick="buyStock()">Order +$100,000 Inventory (-$100,000 Cash)</button>
+    <button style="background:#eab308;" onclick="takeLoan()">Take Out $500,000 Bank Loan</button>
+  </div>
+
+  <script>
+    const socket = io();
+    let currentTeamId = '';
+
+    function joinGame() {
+      const groupName = document.getElementById('groupName').value.trim();
+      const venueName = document.getElementById('venueName').value.trim();
+      const startingOption = document.getElementById('startingOption').value;
+      const role = document.getElementById('role').value;
+
+      if (!groupName) return alert('Please enter a group name');
+
+      currentTeamId = groupName.toLowerCase().replace(/\s+/g, '-');
+      
+      socket.emit('joinTeam', { groupName, venueName, startingOption, role });
+
+      document.getElementById('joinSection').classList.add('hidden');
+      document.getElementById('gameDashboard').classList.remove('hidden');
+      document.getElementById('roleBadge').innerText = role;
+      document.getElementById('displayGroupName').innerText = groupName;
+      document.getElementById('displayVenueName').innerText = `"${venueName}"`;
+    }
+
+    socket.on('stateUpdate', (state) => {
+      if (currentTeamId && state.teams[currentTeamId]) {
+        const team = state.teams[currentTeamId];
+        document.getElementById('netWorth').innerText = `$${team.netWorth.toLocaleString()}`;
+        document.getElementById('cash').innerText = `$${team.cash.toLocaleString()}`;
+      }
+    });
+
+    socket.on('cameoEvent', (key) => {
+      alert(`🎭 CAMEO TRIGGERED: ${key} Event has hit the room! Check host screen.`);
+    });
+
+    function buyStock() {
+      socket.emit('makeDecision', { teamId: currentTeamId, deltaCash: -100000, deltaInventory: 100000 });
+    }
+
+    function takeLoan() {
+      socket.emit('makeDecision', { teamId: currentTeamId, deltaCash: 500000, deltaDebt: 500000 });
+    }
+  </script>
+</body>
+</html>
