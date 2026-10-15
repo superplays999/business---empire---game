@@ -15,29 +15,40 @@ let gameState = {
   teams: {}
 };
 
-// Cameo Event Pool
-const cameos = [
-  {
-    title: "🎭 DDLJ DDLJ Twist!",
-    desc: "Simran missed the train! Footfall drops by 15% for all venues, but marketing hype increases valuation by $500,000!",
-    img: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop"
-  },
-  {
-    title: "⚡ SHAZAM Power Boost!",
-    desc: "A sudden lightning strike powers up all equipment! Daily organic revenue doubles for the next 3 days!",
-    img: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop"
-  },
-  {
-    title: "👨‍🍳 Gordon Ramsay Inspection!",
-    desc: "Ramsay visits your venue! Top 2 teams receive $1,000,000 in investor bonus. Bottom team loses $300,000 in food waste!",
-    img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop"
-  },
-  {
-    title: "🦈 Shark Tank Blitz!",
-    desc: "A Shark investor offers a secret equity deal! All teams gain $2,000,000 cash but accumulate $500,000 extra debt!",
-    img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop"
-  }
-];
+// Level-Specific Story Cameos
+const cameosByLevel = {
+  1: [
+    {
+      title: "🍺 DDLJ: Raj Knocks at Closing Time",
+      desc: "Raj knocks at your store door late at night asking for aspirin. If you trust him and open, he steals a crate of beer, smashes shelves, and throws cash/aspirin at you! Loss of respect and -$400,000 in store repairs. Refusing keeps your store safe.",
+      img: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop"
+    },
+    {
+      title: "⚡ Shazam: Convenience Store Robbery",
+      desc: "Armed robbers hold up the cashier! Shazam intervenes and beats them up, saving your cash register, but smashes your front window and glass display in the process. Do you report to police or absorb glass repair costs?",
+      img: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop"
+    }
+  ],
+  2: [
+    {
+      title: "👨‍🍳 Gordon Ramsay & Shanka Ghosh (Kitchen Nightmares)",
+      desc: "Gordon Ramsay and Shanka Ghosh (World's biggest food critic) arrive to shoot Kitchen Nightmares! Good food yields +$2,000,000 investment & goodwill. Bad food causes -$4,000,000 loss (double investment penalty) & massive goodwill hit!",
+      img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop"
+    },
+    {
+      title: "🐀 Ratatouille Off-Menu Challenge",
+      desc: "A top culinary critic arrives demanding an off-menu specialty dish: Ratatouille. Preparing it perfectly grants +$1,500,000 in VIP bookings, while declining causes reputation loss.",
+      img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop"
+    }
+  ],
+  3: [
+    {
+      title: "🎄 Home Alone 2: Kevin Checks In",
+      desc: "Young Kevin McCallister attempts to check into your luxury hotel using a stolen credit card. Letting him stay leads to room booby-traps & -$1,200,000 in property damage! Turning him away incurs zero losses.",
+      img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop"
+    }
+  ]
+};
 
 io.on('connection', (socket) => {
   socket.emit('stateUpdate', gameState);
@@ -95,9 +106,10 @@ io.on('connection', (socket) => {
     io.emit('stateUpdate', gameState);
   });
 
-  // Random Surprise Trigger
+  // Random Surprise Trigger Filtered by Current Active Level
   socket.on('triggerRandomCameo', () => {
-    const randomEvent = cameos[Math.floor(Math.random() * cameos.length)];
+    const currentPool = cameosByLevel[gameState.currentLevel] || cameosByLevel[1];
+    const randomEvent = currentPool[Math.floor(Math.random() * currentPool.length)];
     io.emit('cameoEvent', randomEvent);
   });
 
