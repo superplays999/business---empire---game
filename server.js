@@ -15,37 +15,32 @@ let gameState = {
   teams: {}
 };
 
-// Level-Specific Story Cameos
+// Level-Specific Story Cameos (No spoilery math or outcomes)
 const cameosByLevel = {
   1: [
     {
-      title: "🍺 DDLJ: Raj Knocks at Closing Time",
-      desc: "Raj knocks at your store door late at night asking for aspirin. If you trust him and open, he steals a crate of beer, smashes shelves, and throws cash/aspirin at you! Loss of respect and -$400,000 in store repairs. Refusing keeps your store safe.",
-      img: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop"
+      title: "🍺 LATE NIGHT KNOCK AT CLOSING TIME",
+      desc: "It's past midnight and the store shutters are coming down. A guy named Raj frantically knocks on the shutter holding some cash, asking if you can open up briefly just to give him some aspirin..."
     },
     {
-      title: "⚡ Shazam: Convenience Store Robbery",
-      desc: "Armed robbers hold up the cashier! Shazam intervenes and beats them up, saving your cash register, but smashes your front window and glass display in the process. Do you report to police or absorb glass repair costs?",
-      img: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop"
+      title: "⚡ SHAZAM & THE ARMED ROBBERY",
+      desc: "Armed robbers hold up your cashier! Shazam flies in, beats them up, and saves your cash register, but smashes your front window and glass display in the process. Do you report this to the police or stay quiet and absorb the glass repairs yourself?"
     }
   ],
   2: [
     {
-      title: "👨‍🍳 Gordon Ramsay & Shanka Ghosh (Kitchen Nightmares)",
-      desc: "Gordon Ramsay and Shanka Ghosh (World's biggest food critic) arrive to shoot Kitchen Nightmares! Good food yields +$2,000,000 investment & goodwill. Bad food causes -$4,000,000 loss (double investment penalty) & massive goodwill hit!",
-      img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop"
+      title: "👨‍🍳 KITCHEN NIGHTMARES MAKES A SURPRISE VISIT",
+      desc: "Gordon Ramsay and Shanka Ghosh (the world's most feared food critic) walk into your kitchen with a full camera crew to film an episode of Kitchen Nightmare. Your kitchen team is on the spot..."
     },
     {
-      title: "🐀 Ratatouille Off-Menu Challenge",
-      desc: "A top culinary critic arrives demanding an off-menu specialty dish: Ratatouille. Preparing it perfectly grants +$1,500,000 in VIP bookings, while declining causes reputation loss.",
-      img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop"
+      title: "🐀 ANTON EGO DEMANDS AN OFF-MENU SPECIALTY",
+      desc: "The legendary, cold-hearted food critic Anton Ego sits at your best table. He refuses the regular menu and demands a simple, rustic countryside dish that reminds him of his childhood..."
     }
   ],
   3: [
     {
-      title: "🎄 Home Alone 2: Kevin Checks In",
-      desc: "Young Kevin McCallister attempts to check into your luxury hotel using a stolen credit card. Letting him stay leads to room booby-traps & -$1,200,000 in property damage! Turning him away incurs zero losses.",
-      img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop"
+      title: "🎄 A YOUNG GUEST NAMED KEVIN CHECKS IN",
+      desc: "A clever 10-year-old boy named Kevin McCallister walks up to the front desk of your luxury hotel alone, holding a credit card and asking for the suite room..."
     }
   ]
 };
@@ -106,7 +101,7 @@ io.on('connection', (socket) => {
     io.emit('stateUpdate', gameState);
   });
 
-  // Random Surprise Trigger Filtered by Current Active Level
+  // Random Surprise Trigger Filtered by Active Level
   socket.on('triggerRandomCameo', () => {
     const currentPool = cameosByLevel[gameState.currentLevel] || cameosByLevel[1];
     const randomEvent = currentPool[Math.floor(Math.random() * currentPool.length)];
