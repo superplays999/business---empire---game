@@ -11,6 +11,8 @@
     .controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
     button { background: #0284c7; color: white; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; }
     button:hover { background: #0369a1; }
+    .reset-btn { background: #ef4444; }
+    .reset-btn:hover { background: #dc2626; }
     .cameo-btn { background: #8b5cf6; }
     .cameo-btn:hover { background: #7c3aed; }
     .leaderboard { max-width: 900px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
@@ -28,6 +30,7 @@
 
   <div class="controls">
     <button onclick="advanceDay()">⏩ Advance Day</button>
+    <button class="reset-btn" onclick="resetGame()">🔄 Reset Game</button>
     <button class="cameo-btn" onclick="triggerCameo('DDLJ')">🎭 Trigger DDLJ Cameo</button>
     <button class="cameo-btn" onclick="triggerCameo('SHAZAM')">🎭 Trigger Shazam Cameo</button>
   </div>
@@ -51,7 +54,7 @@
         return;
       }
 
-      const cutoffIndex = Math.ceil(teamsArr.length * 0.8);
+      const cutoffIndex = Math.ceil(teamsArr.length * 0.8); // Top 80% keep going
 
       teamsArr.forEach((team, index) => {
         if (index === cutoffIndex && teamsArr.length > 2) {
@@ -76,8 +79,19 @@
       });
     });
 
-    function advanceDay() { socket.emit('advanceDay'); }
-    function triggerCameo(key) { socket.emit('triggerCameo', key); }
+    function advanceDay() { 
+      socket.emit('advanceDay'); 
+    }
+
+    function resetGame() {
+      if (confirm("Are you sure you want to reset the game back to Day 1 and clear all teams?")) {
+        socket.emit('resetGame');
+      }
+    }
+
+    function triggerCameo(key) { 
+      socket.emit('triggerCameo', key); 
+    }
   </script>
 </body>
 </html>
