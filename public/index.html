@@ -30,10 +30,10 @@
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000; }
     .modal-card { background: #1e293b; border: 3px solid #ec4899; border-radius: 16px; width: 90%; max-width: 650px; text-align: center; overflow: hidden; box-shadow: 0 0 35px rgba(236, 72, 153, 0.5); animation: popIn 0.4s ease-out; }
     @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .modal-img { width: 100%; height: 260px; object-fit: cover; }
+    .modal-img { width: 100%; height: 280px; object-fit: cover; }
     .modal-body { padding: 25px; }
-    .modal-title { font-size: 2rem; color: #f43f5e; margin-bottom: 10px; text-transform: uppercase; }
-    .modal-desc { font-size: 1.15rem; color: #f8fafc; line-height: 1.5; margin-bottom: 20px; }
+    .modal-title { font-size: 1.8rem; color: #f43f5e; margin-bottom: 12px; text-transform: uppercase; }
+    .modal-desc { font-size: 1.1rem; color: #f8fafc; line-height: 1.5; margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -45,7 +45,7 @@
     <button class="level-btn" onclick="setLevel(1)">🏪 Set L1 (Store)</button>
     <button class="level-btn" onclick="setLevel(2)">🍽️ Set L2 (Restaurant)</button>
     <button class="level-btn" onclick="setLevel(3)">🏨 Set L3 (Hotel)</button>
-    <button class="surprise-btn" onclick="triggerSurprise()">🎲 SURPRISE EVENT!</button>
+    <button class="surprise-btn" onclick="triggerSurprise()">🎲 SURPRISE CUSTOMER!</button>
     <button class="reset-btn" onclick="resetGame()">🔄 Reset Game</button>
   </div>
 
@@ -56,11 +56,11 @@
   <!-- Surprise Overlay -->
   <div class="modal-overlay" id="cameoModal">
     <div class="modal-card">
-      <img id="modalImg" class="modal-img" src="" alt="Event Surprise">
+      <img id="modalImg" class="modal-img" src="" alt="Customer Event">
       <div class="modal-body">
-        <div id="modalTitle" class="modal-title">SURPRISE EVENT</div>
+        <div id="modalTitle" class="modal-title">SURPRISE CUSTOMER</div>
         <div id="modalDesc" class="modal-desc">Event details loading...</div>
-        <button style="background: #ec4899; font-size: 1.1rem;" onclick="closeModal()">Got It! Return to Game</button>
+        <button style="background: #ec4899; font-size: 1.1rem;" onclick="closeModal()">Got It! Resume Game</button>
       </div>
     </div>
   </div>
@@ -68,7 +68,6 @@
   <script>
     const socket = io();
 
-    // Web Audio Sound Synthesizer
     function playClickSound() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -130,7 +129,6 @@
       });
     });
 
-    // Surprise Event Popup Handler
     socket.on('cameoEvent', (eventData) => {
       document.getElementById('modalTitle').innerText = eventData.title;
       document.getElementById('modalDesc').innerText = eventData.desc;
