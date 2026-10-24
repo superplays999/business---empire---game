@@ -15,6 +15,7 @@ const gameState = {
 };
 
 io.on('connection', (socket) => {
+  // 1. Team Onboarding & Role Lock
   socket.on('register_team', ({ persistentName, venueName, role }) => {
     let team = gameState.teams[persistentName];
     if (!team) {
@@ -41,15 +42,20 @@ io.on('connection', (socket) => {
 
     socket.join(persistentName);
     io.emit('state_update', gameState);
+    io.emit('host_news_ticker', `REGISTERED: ${persistentName} joined as ${venueName || 'New Venture'}!`);
   });
 
+  // 2. Solo Decision Logic
   socket.on('submit_solo_choice', ({ persistentName, choiceIndex, isHintUsed, isSkipUsed }) => {
     const team = gameState.teams[persistentName];
     if (!team) return;
 
+    let newsMsg = "";
+
     if (isSkipUsed || choiceIndex === -1) {
       team.cash -= 300000;
       team.skipsUsed++;
+      newsMsg = `PENALTY: ${persistentName} timed out / skipped a critical decision! (-$300,000)`;
     } else {
       if (isHintUsed) {
         team.cash -= 50000;
@@ -58,19 +64,23 @@ io.on('connection', (socket) => {
       if (choiceIndex === 0) {
         team.cash += 250000;
         team.currentRating = Math.min(5.0, team.currentRating + 0.1);
+        newsMsg = `STRATEGY: ${persistentName} executed an optimal operational move! (Net Worth & Goodwill Increased)`;
       } else {
         const penalties = [50000, 100000, 150000];
-        team.cash -= penalties[choiceIndex - 1] || 100000;
+        const penaltyVal = penalties[choiceIndex - 1] || 100000;
+        team.cash -= penaltyVal;
         team.currentRating = Math.max(1.0, team.currentRating - 0.15);
+        newsMsg = `MARKET RESPONSE: ${persistentName} suffered a setback from a poor operational choice!`;
       }
     }
 
-    // Save level rating snapshot
+    // Snapshots for Goodwill Bonus Calculation
     if (gameState.currentLevel === 1) team.ratingL1 = team.currentRating;
     if (gameState.currentLevel === 2) team.ratingL2 = team.currentRating;
     if (gameState.currentLevel === 3) team.ratingL3 = team.currentRating;
 
     io.emit('state_update', gameState);
+    io.emit('host_news_ticker', newsMsg);
   });
 });
 
