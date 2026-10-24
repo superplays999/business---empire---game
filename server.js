@@ -8,119 +8,156 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static('public'));
 
-let gameState = {
+// Global Game State
+const gameState = {
+  teams: {}, // roomId -> { persistentName, levelVenue, ceoId, managerId, cash, assets, debt, rating, currentLevel }
   currentLevel: 1,
-  simulatedDay: 1,
-  maxDays: 30,
-  teams: {}
+  gameActive: false
 };
 
-// Level-Specific Story Cameos (No spoilery math or outcomes)
-const cameosByLevel = {
-  1: [
+// Question Sets (Sample structure for Level 1)
+const LEVEL_1_QUESTIONS = {
+  ceo: [
     {
-      title: "🍺 LATE NIGHT KNOCK AT CLOSING TIME",
-      desc: "It's past midnight and the store shutters are coming down. A guy named Raj frantically knocks on the shutter holding some cash, asking if you can open up briefly just to give him some aspirin..."
-    },
-    {
-      title: "⚡ SHAZAM & THE ARMED ROBBERY",
-      desc: "Armed robbers hold up your cashier! Shazam flies in, beats them up, and saves your cash register, but smashes your front window and glass display in the process. Do you report this to the police or stay quiet and absorb the glass repairs yourself?"
+      id: "ceo_1",
+      title: "Opening Capital Loan",
+      concept: "Cost of Capital & Time Value of Money",
+      options: [
+        { label: "A", text: "Take a 5-year fixed 6% bank loan of $1M", correct: true, penalty: 0 },
+        { label: "B", text: "Take a 12% high-yield short-term credit line", correct: false, penalty: 50000 },
+        { label: "C", text: "Dilute 30% equity for $1M cash", correct: false, penalty: 100000 },
+        { label: "D", text: "Borrow $500k at 18% micro-finance rate", correct: false, penalty: 150000 }
+      ]
     }
+    // ... 6 more CEO questions
   ],
-  2: [
+  manager: [
     {
-      title: "👨‍🍳 KITCHEN NIGHTMARES MAKES A SURPRISE VISIT",
-      desc: "Gordon Ramsay and Shanka Ghosh (the world's most feared food critic) walk into your kitchen with a full camera crew to film an episode of Kitchen Nightmare. Your kitchen team is on the spot..."
-    },
-    {
-      title: "🐀 ANTON EGO DEMANDS AN OFF-MENU SPECIALTY",
-      desc: "The legendary, cold-hearted food critic Anton Ego sits at your best table. He refuses the regular menu and demands a simple, rustic countryside dish that reminds him of his childhood..."
+      id: "mgr_1",
+      title: "The Barefoot Customer",
+      concept: "Customer Relationship Management (CRM) & Brand Equity",
+      options: [
+        { label: "A", text: "Enforce 'No Shoes, No Service' safety policy", correct: true, penalty: 0 },
+        { label: "B", text: "Serve customer quickly to pocket $50 cash", correct: false, penalty: 50000 },
+        { label: "C", text: "Charge a $10 barefoot surcharge", correct: false, penalty: 100000 },
+        { label: "D", text: "Give away free disposable slippers", correct: false, penalty: 150000 }
+      ]
     }
-  ],
-  3: [
-    {
-      title: "🎄 A YOUNG GUEST NAMED KEVIN CHECKS IN",
-      desc: "A clever 10-year-old boy named Kevin McCallister walks up to the front desk of your luxury hotel alone, holding a credit card and asking for the suite room..."
-    }
+    // ... 8 more Manager questions
   ]
 };
 
 io.on('connection', (socket) => {
-  socket.emit('stateUpdate', gameState);
+  console.log(`Client connected: ${socket.id}`);
 
-  socket.on('joinTeam', ({ groupName, venueName, startingOption, role }) => {
-    const teamId = groupName.toLowerCase().replace(/\s+/g, '-');
-    
-    if (!gameState.teams[teamId]) {
-      const startingCash = startingOption === 'B' ? 5000000 : 10000000;
-      const startingAssets = startingOption === 'B' ? 5000000 : 0;
-      
-      gameState.teams[teamId] = {
-        id: teamId,
-        groupName: groupName,
-        venueName: venueName || 'My Business',
-        startingOption: startingOption || 'A',
-        cash: startingCash,
-        inventory: startingAssets,
+  // 1. Team Registration & Role Selection
+  socket.on('register_team', ({ persistentName, venueName, role }) => {
+    let team = Object.values(gameState.teams).find(t => t.persistentName === persistentName);
+    if (!team) {
+      team = {
+        persistentName,
+        venueName,
+        ceoId: null,
+        managerId: null,
+        cash: 0,
+        assets: 0,
         debt: 0,
-        netWorth: startingCash + startingAssets,
-        members: {}
+        rating: 5.0,
+        hintsUsed: 0,
+        skipsUsed: 0
       };
+      gameState.teams[persistentName] = team;
     }
-    
-    gameState.teams[teamId].members[role] = socket.id;
-    socket.join(teamId);
-    io.emit('stateUpdate', gameState);
+
+    if (role === 'CEO') team.ceoId = socket.id;
+    if (role === 'MANAGER') team.managerId = socket.id;
+
+    socket.join(persistentName);
+    io.emit('state_update', gameState);
   });
 
-  socket.on('advanceDay', () => {
-    if (gameState.simulatedDay < gameState.maxDays) {
-      gameState.simulatedDay += 1;
-      Object.values(gameState.teams).forEach(team => {
-        const yieldAmount = Math.floor(team.netWorth * 0.02);
-        team.cash += yieldAmount;
-        team.netWorth = team.cash + team.inventory - team.debt;
-      });
-      io.emit('stateUpdate', gameState);
+  // 2. Day 0 Foundational Choice ($10M vs $5M) & Joint Decision Resolution Engine
+  socket.on('submit_joint_choice', ({ persistentName, choice, isVerificationCorrect, eventId }) => {
+    const team = gameState.teams[persistentName];
+    if (!team) return;
+
+    if (!team.jointAnswers) team.jointAnswers = {};
+    team.jointAnswers[socket.id] = { choice, isVerificationCorrect };
+
+    // Wait until both CEO and Manager submit
+    if (Object.keys(team.jointAnswers).length === 2) {
+      const answers = Object.values(team.jointAnswers);
+      const p1 = answers[0];
+      const p2 = answers[1];
+      let selectedChoice = null;
+      let newsMessage = "";
+
+      // Resolution Logic Matrix
+      if (p1.isVerificationCorrect && p2.isVerificationCorrect) {
+        // Coin Toss
+        selectedChoice = Math.random() > 0.5 ? p1.choice : p2.choice;
+        newsMessage = `Clash at ${persistentName}! Both answered correctly; Coin Toss forced Option ${selectedChoice}!`;
+      } else if (p1.isVerificationCorrect && !p2.isVerificationCorrect) {
+        selectedChoice = p1.choice;
+        newsMessage = `${persistentName}: Correct player's decision (Option ${selectedChoice}) executed!`;
+      } else if (!p1.isVerificationCorrect && p2.isVerificationCorrect) {
+        selectedChoice = p2.choice;
+        newsMessage = `${persistentName}: Correct player's decision (Option ${selectedChoice}) executed!`;
+      } else {
+        // Both Wrong: Random choice
+        selectedChoice = Math.random() > 0.5 ? 'A' : 'B';
+        if (eventId !== 'day_0_setup') {
+          team.cash -= 300000; // Deduct Skip Penalty only during operations
+        }
+        newsMessage = `Both failed verification at ${persistentName}! Option ${selectedChoice} randomly executed.`;
+      }
+
+      // Execute Day 0 Capital Setup
+      if (eventId === 'day_0_setup') {
+        if (selectedChoice === 'A') {
+          team.cash = 10000000;
+          team.assets = 0;
+        } else {
+          team.cash = 5000000;
+          team.assets = 2000000;
+          team.rating = 4.8;
+        }
+      }
+
+      team.jointAnswers = {}; // Reset container
+      io.to(persistentName).emit('joint_resolved', { selectedChoice });
+      io.emit('host_news_ticker', newsMessage);
+      io.emit('state_update', gameState);
     }
   });
 
-  socket.on('setLevel', (levelNum) => {
-    gameState.currentLevel = levelNum;
-    gameState.simulatedDay = 1;
-    io.emit('stateUpdate', gameState);
-  });
+  // 3. Solo Decision Processing
+  socket.on('submit_solo_choice', ({ persistentName, questionId, choiceIndex, isHintUsed, isSkipUsed }) => {
+    const team = gameState.teams[persistentName];
+    if (!team) return;
 
-  socket.on('resetGame', () => {
-    gameState = {
-      currentLevel: 1,
-      simulatedDay: 1,
-      maxDays: 30,
-      teams: {}
-    };
-    io.emit('stateUpdate', gameState);
-  });
-
-  // Random Surprise Trigger Filtered by Active Level
-  socket.on('triggerRandomCameo', () => {
-    const currentPool = cameosByLevel[gameState.currentLevel] || cameosByLevel[1];
-    const randomEvent = currentPool[Math.floor(Math.random() * currentPool.length)];
-    io.emit('cameoEvent', randomEvent);
-  });
-
-  socket.on('makeDecision', ({ teamId, deltaCash, deltaInventory, deltaDebt }) => {
-    const team = gameState.teams[teamId];
-    if (team) {
-      team.cash += (deltaCash || 0);
-      team.inventory += (deltaInventory || 0);
-      team.debt += (deltaDebt || 0);
-      team.netWorth = team.cash + team.inventory - team.debt;
-      io.emit('stateUpdate', gameState);
+    if (isSkipUsed) {
+      team.cash -= 300000; // Skip penalty
+      team.skipsUsed++;
+    } else {
+      if (isHintUsed) {
+        team.cash -= 50000; // Hint cost
+        team.hintsUsed++;
+      }
+      // Apply weighted penalty if wrong
+      if (choiceIndex !== 0) { // Assuming index 0 is correct answer in our data
+        const penalties = [50000, 100000, 150000];
+        team.cash -= penalties[choiceIndex - 1] || 100000;
+        team.rating = Math.max(1.0, team.rating - 0.1);
+      } else {
+        team.cash += 150000; // Success revenue
+        team.rating = Math.min(5.0, team.rating + 0.1);
+      }
     }
+
+    io.emit('state_update', gameState);
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
