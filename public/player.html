@@ -3,103 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Player Dashboard</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>Executive Terminal</title>
   <style>
-    body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 15px; margin: 0; }
-    .card { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-    input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: none; font-size: 1rem; box-sizing: border-box; }
-    input, select { background: #334155; color: white; }
-    button { background: #22c55e; color: white; font-weight: bold; cursor: pointer; }
-    .badge { background: #38bdf8; color: #0f172a; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
-    .hidden { display: none; }
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; padding: 15px; margin: 0; }
+    .card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #334155; }
+    .btn { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+    .btn-action { background: #2563eb; color: white; }
+    .btn-hint { background: #d97706; color: white; }
+    .btn-skip { background: #dc2626; color: white; }
+    .concept-tag { font-size: 0.85rem; color: #38bdf8; font-weight: bold; display: block; margin-top: 4px; }
   </style>
 </head>
 <body>
 
-  <!-- JOIN FORM -->
-  <div id="joinSection" class="card">
-    <h2>📱 Join Team Room</h2>
-    <label>Group / Team Name:</label>
-    <input type="text" id="groupName" placeholder="e.g. Apex Retailers">
-
-    <label>Level 1 Store Name:</label>
-    <input type="text" id="venueName" placeholder="e.g. Corner Market">
-
-    <label>Starting Strategy:</label>
-    <select id="startingOption">
-      <option value="A">Option A: $10M Scratch (Zero Traffic)</option>
-      <option value="B">Option B: $5M Established (High Traffic)</option>
-    </select>
-
-    <label>Your Role:</label>
-    <select id="role">
-      <option value="CEO">Player 1: CEO (Founder / Macro)</option>
-      <option value="Manager">Player 2: Manager (Co-Founder / Micro)</option>
-    </select>
-
-    <button onclick="joinGame()">ENTER GAME ROOM</button>
+  <!-- 1. Registration Screen -->
+  <div id="setup-screen" class="card">
+    <h2>🏢 Executive Onboarding</h2>
+    <input type="text" id="persistentName" placeholder="Persistent Team Name (e.g. Apex Corp)" style="width: 90%; padding: 10px; margin-bottom: 10px;"><br>
+    <input type="text" id="venueName" placeholder="Level Venue Name (e.g. Quick Stop)" style="width: 90%; padding: 10px; margin-bottom: 10px;"><br>
+    <select id="role" style="width: 95%; padding: 10px; margin-bottom: 15px;">
+      <option value="CEO">CEO (Macro Strategy)</option>
+      <option value="MANAGER">Manager (Micro Operations)</option>
+    </select><br>
+    <button class="btn btn-action" onclick="register()">CONNECT TERMINAL</button>
   </div>
 
-  <!-- GAME DASHBOARD -->
-  <div id="gameDashboard" class="card hidden">
-    <div><span class="badge" id="roleBadge">ROLE</span> <b id="displayGroupName">Team</b></div>
-    <h3 id="displayVenueName">Store Name</h3>
-    
-    <hr style="border-color: #334155;">
+  <!-- 2. Decision Screen -->
+  <div id="game-screen" style="display: none;">
+    <div class="card">
+      <h3 id="question-title">Loading Decision...</h3>
+      <span id="concept-tag" class="concept-tag"></span>
+      <p id="question-desc" style="color: #94a3b8;"></p>
+    </div>
 
-    <h4>💰 Financial Overview</h4>
-    <p>Net Worth: <b id="netWorth">$0</b></p>
-    <p>Cash on Hand: <span id="cash">$0</span></p>
+    <!-- Action Buttons (Only Actions Shown — No Consequences Revealed) -->
+    <div id="options-container"></div>
 
-    <hr style="border-color: #334155;">
-
-    <h4>⚡ Quick Actions</h4>
-    <button onclick="buyStock()">Order +$100,000 Inventory (-$100,000 Cash)</button>
-    <button style="background:#eab308;" onclick="takeLoan()">Take Out $500,000 Bank Loan</button>
+    <!-- Lifeline Buttons -->
+    <div class="card" style="margin-top: 20px;">
+      <button class="btn btn-hint" onclick="useHint()">🔓 UNLOCK HINT (-$50,000 Cash)</button>
+      <button class="btn btn-skip" onclick="useSkip()">⏭️ SKIP QUESTION (-$300,000 Penalty)</button>
+    </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    let currentTeamId = '';
+    let teamData = {};
 
-    function joinGame() {
-      const groupName = document.getElementById('groupName').value.trim();
-      const venueName = document.getElementById('venueName').value.trim();
-      const startingOption = document.getElementById('startingOption').value;
-      const role = document.getElementById('role').value;
+    function register() {
+      teamData.persistentName = document.getElementById('persistentName').value;
+      teamData.venueName = document.getElementById('venueName').value;
+      teamData.role = document.getElementById('role').value;
 
-      if (!groupName) return alert('Please enter a group name');
+      socket.emit('register_team', teamData);
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('game-screen').style.display = 'block';
 
-      currentTeamId = groupName.toLowerCase().replace(/\s+/g, '-');
-      
-      socket.emit('joinTeam', { groupName, venueName, startingOption, role });
-
-      document.getElementById('joinSection').classList.add('hidden');
-      document.getElementById('gameDashboard').classList.remove('hidden');
-      document.getElementById('roleBadge').innerText = role;
-      document.getElementById('displayGroupName').innerText = groupName;
-      document.getElementById('displayVenueName').innerText = `"${venueName}"`;
+      // Load sample initial decision
+      renderSampleQuestion();
     }
 
-    socket.on('stateUpdate', (state) => {
-      if (currentTeamId && state.teams[currentTeamId]) {
-        const team = state.teams[currentTeamId];
-        document.getElementById('netWorth').innerText = `$${team.netWorth.toLocaleString()}`;
-        document.getElementById('cash').innerText = `$${team.cash.toLocaleString()}`;
-      }
-    });
+    function renderSampleQuestion() {
+      document.getElementById('question-title').innerText = "📌 School District Juice Bulk Deal";
+      document.getElementById('concept-tag').innerText = "[Concept: Price Elasticity of Demand (|Ed| > 1)]";
+      document.getElementById('question-desc').innerText = "The local school board offers to buy 500 juice boxes daily if you grant a 30% bulk discount.";
 
-    socket.on('cameoEvent', (key) => {
-      alert(`🎭 CAMEO TRIGGERED: ${key} Event has hit the room! Check host screen.`);
-    });
-
-    function buyStock() {
-      socket.emit('makeDecision', { teamId: currentTeamId, deltaCash: -100000, deltaInventory: 100000 });
+      const container = document.getElementById('options-container');
+      container.innerHTML = `
+        <button class="btn btn-action" onclick="submitChoice(0)">Accept the 30% bulk discount deal</button>
+        <button class="btn btn-action" onclick="submitChoice(1)">Reject deal to protect single-unit margin</button>
+        <button class="btn btn-action" onclick="submitChoice(2)">Counter-offer with a 10% discount</button>
+        <button class="btn btn-action" onclick="submitChoice(3)">Propose a mandatory combo bundle deal</button>
+      `;
     }
 
-    function takeLoan() {
-      socket.emit('makeDecision', { teamId: currentTeamId, deltaCash: 500000, deltaDebt: 500000 });
+    function submitChoice(choiceIndex) {
+      socket.emit('submit_solo_choice', {
+        persistentName: teamData.persistentName,
+        questionId: "sample_q1",
+        choiceIndex: choiceIndex,
+        isHintUsed: false,
+        isSkipUsed: false
+      });
+      alert("Decision Submitted! Waiting for next scenario...");
+    }
+
+    function useHint() {
+      alert("CONCEPT HINT: When demand is price elastic (|Ed| > 1), dropping the unit price increases total revenue (R = P x Q) because sales volume rises at a higher percentage rate!");
+    }
+
+    function useSkip() {
+      socket.emit('submit_solo_choice', {
+        persistentName: teamData.persistentName,
+        questionId: "sample_q1",
+        choiceIndex: -1,
+        isHintUsed: false,
+        isSkipUsed: true
+      });
+      alert("Question Skipped. -$300,000 Penalty Applied.");
     }
   </script>
 </body>
