@@ -101,9 +101,11 @@
 <body>
 
   <div class="container">
-    <!-- Onboarding Screen -->
+    <!-- Onboarding Form -->
     <div id="setup-screen" class="card">
       <h2>🏢 Executive Terminal</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Register your team to connect to the session.</p>
+      
       <input type="text" id="persistentName" placeholder="Persistent Team Name (e.g. Apex Corp)">
       <input type="text" id="venueName" placeholder="Level Venue Name (e.g. Quick Stop)">
       <select id="role">
@@ -121,7 +123,7 @@
       </div>
 
       <div class="card">
-        <h3 id="question-title">Loading Scenario...</h3>
+        <h3 id="question-title">Loading Decision...</h3>
         <span id="concept-tag" class="concept-tag"></span>
         <p id="question-desc" style="color: var(--text-muted); line-height: 1.5;"></p>
       </div>
@@ -139,7 +141,9 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    let socket;
+    try { socket = io(); } catch(e) {}
+
     let teamData = {};
     let currentQuestionIndex = 0;
     let timerInterval = null;
@@ -207,7 +211,7 @@
 
         if (timeLeft <= 5) {
           display.style.color = '#dc2626';
-          playSound(900, 0.05); // High warning tick
+          playSound(900, 0.05); // Warning tick
         }
 
         if (timeLeft <= 0) {
@@ -223,7 +227,7 @@
       teamData.venueName = document.getElementById('venueName').value || 'Quick Stop';
       teamData.role = document.getElementById('role').value;
 
-      socket.emit('register_team', teamData);
+      if (socket) socket.emit('register_team', teamData);
       document.getElementById('setup-screen').style.display = 'none';
       document.getElementById('game-screen').style.display = 'block';
 
@@ -236,7 +240,7 @@
         document.getElementById('game-screen').innerHTML = `
           <div class="card" style="text-align: center;">
             <h2>🎉 Round Complete!</h2>
-            <p style="color: var(--text-muted);">Check the main host screen for standings!</p>
+            <p style="color: var(--text-muted);">Check the main host screen for standings & market news!</p>
           </div>
         `;
         return;
@@ -263,12 +267,14 @@
 
     function submitChoice(choiceIndex) {
       playSound(800, 0.05);
-      socket.emit('submit_solo_choice', {
-        persistentName: teamData.persistentName,
-        choiceIndex: choiceIndex,
-        isHintUsed: false,
-        isSkipUsed: false
-      });
+      if (socket) {
+        socket.emit('submit_solo_choice', {
+          persistentName: teamData.persistentName,
+          choiceIndex: choiceIndex,
+          isHintUsed: false,
+          isSkipUsed: false
+        });
+      }
 
       currentQuestionIndex++;
       renderQuestion(currentQuestionIndex);
@@ -281,12 +287,14 @@
 
     function useSkip() {
       playSound(300, 0.1);
-      socket.emit('submit_solo_choice', {
-        persistentName: teamData.persistentName,
-        choiceIndex: -1,
-        isHintUsed: false,
-        isSkipUsed: true
-      });
+      if (socket) {
+        socket.emit('submit_solo_choice', {
+          persistentName: teamData.persistentName,
+          choiceIndex: -1,
+          isHintUsed: false,
+          isSkipUsed: true
+        });
+      }
 
       currentQuestionIndex++;
       renderQuestion(currentQuestionIndex);
