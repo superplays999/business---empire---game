@@ -1,44 +1,161 @@
-<!-- CSS for Continuous News Ticker -->
-<style>
-  .ticker-wrap {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: #dc2626;
-    color: white;
-    padding: 12px 0;
-    font-weight: bold;
-    font-size: 1.2rem;
-    overflow: hidden;
-    white-space: nowrap;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
-    z-index: 1000;
-  }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Business Empire Championship — Host Projector</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 20px;
+      overflow-x: hidden;
+    }
 
-  .ticker-move {
-    display: inline-block;
-    padding-left: 100%;
-    animation: ticker 25s linear infinite;
-  }
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+      margin-bottom: 5px;
+      font-size: 2.2rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
 
-  @keyframes ticker {
-    0% { transform: translate3d(0, 0, 0); }
-    100% { transform: translate3d(-100%, 0, 0); }
-  }
-</style>
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 30px;
+    }
 
-<!-- Ticker HTML -->
-<div class="ticker-wrap">
-  <div class="ticker-move" id="ticker-text">
-    📰 LIVE DISTRICT MONITOR: Tournament In Progress... Keep an eye on inflation rates and upcoming weather alerts!
+    /* Kahoot-Style Animated Leaderboard */
+    .leaderboard-container {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      height: 600px;
+    }
+
+    .team-card {
+      position: absolute;
+      width: 100%;
+      height: 70px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      box-sizing: border-box;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease;
+    }
+
+    .team-card.rank-1 { background: linear-gradient(90deg, #1e293b 0%, #312e81 100%); border-color: #6366f1; }
+    .team-card.rank-2 { background: linear-gradient(90deg, #1e293b 0%, #1e3a8a 100%); border-color: #3b82f6; }
+    .team-card.rank-3 { background: linear-gradient(90deg, #1e293b 0%, #065f46 100%); border-color: #10b981; }
+
+    .rank-badge { font-size: 1.5rem; font-weight: 900; width: 50px; color: #38bdf8; }
+    .team-info { flex-grow: 1; }
+    .team-name { font-size: 1.3rem; font-weight: bold; }
+    .venue-name { font-size: 0.85rem; color: #94a3b8; }
+    .stat-box { text-align: right; margin-left: 20px; }
+    .net-worth { font-size: 1.4rem; font-weight: bold; color: #4ade80; }
+    .rating-stars { color: #facc15; font-weight: bold; font-size: 1.1rem; }
+
+    /* BBC-Style Scrolling News Ticker (Exclusive to Host Display) */
+    .ticker-wrap {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #dc2626;
+      color: white;
+      padding: 12px 0;
+      font-weight: bold;
+      font-size: 1.2rem;
+      overflow: hidden;
+      white-space: nowrap;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+
+    .ticker-move {
+      display: inline-block;
+      padding-left: 100%;
+      animation: ticker 22s linear infinite;
+    }
+
+    @keyframes ticker {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-100%, 0, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏆 BUSINESS EMPIRE CHAMPIONSHIP</h1>
+  <div class="subtitle">LIVE DISTRICT MONITOR & LEADERBOARD</div>
+
+  <div class="leaderboard-container" id="leaderboard"></div>
+
+  <!-- BBC News Ticker Container -->
+  <div class="ticker-wrap">
+    <div class="ticker-move" id="ticker-text">
+      📰 BREAKING NEWS: Tournament initializing... Teams preparing for Level 1 operations. | 🔮 MARKET HINT: Keep an eye out for late-night travelers near the train station...
+    </div>
   </div>
-</div>
 
-<!-- JavaScript Receiver -->
-<script>
-  socket.on('host_news_ticker', (msg) => {
-    const tickerEl = document.getElementById('ticker-text');
-    tickerEl.innerText = `📰 BREAKING NEWS: ${msg}  |  🔮 MARKET FORECAST: Watch out for upcoming district emergencies!`;
-  });
-</script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const container = document.getElementById('leaderboard');
+    const cardsMap = new Map();
+
+    socket.on('state_update', (state) => {
+      const sortedTeams = Object.values(state.teams).sort((a, b) => 
+        (b.cash + b.assets - b.debt) - (a.cash + a.assets - a.debt)
+      );
+
+      sortedTeams.forEach((team, index) => {
+        const netWorth = team.cash + team.assets - team.debt;
+        const topPos = index * 85;
+
+        let card = cardsMap.get(team.persistentName);
+
+        if (!card) {
+          card = document.createElement('div');
+          card.className = `team-card rank-${index + 1}`;
+          card.innerHTML = `
+            <div class="rank-badge">#${index + 1}</div>
+            <div class="team-info">
+              <div class="team-name">${team.persistentName}</div>
+              <div class="venue-name">Operating: ${team.venueName || 'Setup Phase'}</div>
+            </div>
+            <div class="stat-box">
+              <div class="net-worth">$${netWorth.toLocaleString()}</div>
+              <div class="rating-stars">⭐ ${team.currentRating.toFixed(1)} / 5.0</div>
+            </div>
+          `;
+          container.appendChild(card);
+          cardsMap.set(team.persistentName, card);
+        } else {
+          card.className = `team-card rank-${index + 1}`;
+          card.querySelector('.rank-badge').innerText = `#${index + 1}`;
+          card.querySelector('.venue-name').innerText = `Operating: ${team.venueName || 'Setup Phase'}`;
+          card.querySelector('.net-worth').innerText = `$${netWorth.toLocaleString()}`;
+          card.querySelector('.rating-stars').innerText = `⭐ ${team.currentRating.toFixed(1)} / 5.0`;
+        }
+
+        card.style.transform = `translateY(${topPos}px)`;
+      });
+    });
+
+    socket.on('host_news_ticker', (msg) => {
+      document.getElementById('ticker-text').innerText = `📰 BREAKING NEWS: ${msg}  |  🔮 MARKET FORECAST: Pay attention to central square news during emergency sirens!`;
+    });
+  </script>
+</body>
+</html>
