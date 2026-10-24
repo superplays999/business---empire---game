@@ -5,44 +5,135 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Executive Terminal</title>
   <style>
-    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; padding: 15px; margin: 0; }
-    .card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #334155; }
-    .btn { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-    .btn-action { background: #2563eb; color: white; }
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #2563eb;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 15px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container { width: 100%; max-width: 480px; }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 16px;
+      margin-bottom: 15px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .concept-tag {
+      font-size: 0.85rem;
+      color: #38bdf8;
+      font-weight: bold;
+      display: block;
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0f172a;
+      color: white;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.08s ease, background-color 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { transform: scale(0.96); }
+    .btn-action { background: var(--accent); color: white; }
     .btn-hint { background: #d97706; color: white; }
     .btn-skip { background: #dc2626; color: white; }
-    .concept-tag { font-size: 0.85rem; color: #38bdf8; font-weight: bold; display: block; margin-top: 4px; }
+
+    .timer-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      border-left: 6px solid #38bdf8;
+    }
+
+    .timer-display {
+      font-size: 1.5rem;
+      font-weight: bold;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
 
-  <!-- 1. Registration Screen -->
-  <div id="setup-screen" class="card">
-    <h2>🏢 Executive Onboarding</h2>
-    <input type="text" id="persistentName" placeholder="Persistent Team Name (e.g. Apex Corp)" style="width: 90%; padding: 10px; margin-bottom: 10px;"><br>
-    <input type="text" id="venueName" placeholder="Level Venue Name (e.g. Quick Stop)" style="width: 90%; padding: 10px; margin-bottom: 10px;"><br>
-    <select id="role" style="width: 95%; padding: 10px; margin-bottom: 15px;">
-      <option value="CEO">CEO (Macro Strategy)</option>
-      <option value="MANAGER">Manager (Micro Operations)</option>
-    </select><br>
-    <button class="btn btn-action" onclick="register()">CONNECT TERMINAL</button>
-  </div>
-
-  <!-- 2. Decision Screen -->
-  <div id="game-screen" style="display: none;">
-    <div class="card">
-      <h3 id="question-title">Loading Decision...</h3>
-      <span id="concept-tag" class="concept-tag"></span>
-      <p id="question-desc" style="color: #94a3b8;"></p>
+  <div class="container">
+    <!-- Onboarding Screen -->
+    <div id="setup-screen" class="card">
+      <h2>🏢 Executive Terminal</h2>
+      <input type="text" id="persistentName" placeholder="Persistent Team Name (e.g. Apex Corp)">
+      <input type="text" id="venueName" placeholder="Level Venue Name (e.g. Quick Stop)">
+      <select id="role">
+        <option value="CEO">CEO (Macro Strategy)</option>
+        <option value="MANAGER">Manager (Micro Operations)</option>
+      </select>
+      <button class="btn btn-action" onclick="register()">CONNECT TERMINAL</button>
     </div>
 
-    <!-- Action Buttons (Only Actions Shown — No Consequences Revealed) -->
-    <div id="options-container"></div>
+    <!-- Active Decision Terminal -->
+    <div id="game-screen" style="display: none;">
+      <div class="card timer-card">
+        <span style="font-weight: bold; color: var(--text-muted);">DECISION TIMER</span>
+        <span id="countdown" class="timer-display" style="color: #38bdf8;">00:30</span>
+      </div>
 
-    <!-- Lifeline Buttons -->
-    <div class="card" style="margin-top: 20px;">
-      <button class="btn btn-hint" onclick="useHint()">🔓 UNLOCK HINT (-$50,000 Cash)</button>
-      <button class="btn btn-skip" onclick="useSkip()">⏭️ SKIP QUESTION (-$300,000 Penalty)</button>
+      <div class="card">
+        <h3 id="question-title">Loading Scenario...</h3>
+        <span id="concept-tag" class="concept-tag"></span>
+        <p id="question-desc" style="color: var(--text-muted); line-height: 1.5;"></p>
+      </div>
+
+      <!-- Action Buttons (Only Actions Shown) -->
+      <div id="options-container"></div>
+
+      <!-- Lifeline Actions -->
+      <div class="card">
+        <button class="btn btn-hint" onclick="useHint()">🔓 UNLOCK HINT (-$50,000 Cash)</button>
+        <button class="btn btn-skip" onclick="useSkip()">⏭️ SKIP QUESTION (-$300,000 Penalty)</button>
+      </div>
     </div>
   </div>
 
@@ -50,58 +141,155 @@
   <script>
     const socket = io();
     let teamData = {};
+    let currentQuestionIndex = 0;
+    let timerInterval = null;
+
+    // Web Audio Synthesizer
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(freq, duration) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // Sequence Questions with Timer Categories
+    const sampleQuestions = [
+      {
+        type: 'emergency', time: 15, // 1. Emergency (15s)
+        title: "🚨 District Emergency: Market Square Riot",
+        concept: "[Concept: Crisis Management & Asset Safety]",
+        desc: "Protesters and fleeing crowds gather outside your storefront during central square unrest.",
+        options: ["Open doors as a public shelter", "Lock down steel security shutters"]
+      },
+      {
+        type: 'normal', time: 30, // 2. Normal MCQ (30s)
+        title: "📌 School District Juice Bulk Deal",
+        concept: "[Concept: Price Elasticity of Demand (|Ed| > 1)]",
+        desc: "The local school board offers to buy 500 juice boxes daily if you grant a 30% bulk discount.",
+        options: ["Accept 30% bulk discount", "Reject deal to protect unit margin", "Counter-offer 10% discount", "Propose mandatory combo bundle"]
+      },
+      {
+        type: 'cameo', time: 45, // 3. Story Cameo (45s)
+        title: "🌟 Story Cameo: The Late-Night Traveler",
+        concept: "[Concept: Operating Integrity vs. Goodwill CRM]",
+        desc: "It is 11:58 PM, doors locked. A traveler begs in emotional Hindi for urgent supplies for his train.",
+        options: ["Open shutters to assist him", "Keep doors locked and enforce policy"]
+      },
+      {
+        type: 'numerical', time: 60, // 4. Numerical Math (60s)
+        title: "🧮 High-Interest Debt Restructuring",
+        concept: "[Concept: Financial Leverage]",
+        desc: "Calculate net capital cost: You have $500,000 cash reserves and $400,000 in short-term high-interest debt.",
+        options: ["Pay off short-term debt completely", "Reinvest cash into inventory expansion", "Refinance debt into 3-year term bond", "Hold cash for emergency buffer"]
+      }
+    ];
+
+    function startTimer(seconds, categoryType) {
+      clearInterval(timerInterval);
+      let timeLeft = seconds;
+      const display = document.getElementById('countdown');
+
+      const colors = { emergency: '#ef4444', normal: '#f59e0b', cameo: '#3b82f6', numerical: '#10b981' };
+      display.style.color = colors[categoryType] || '#38bdf8';
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        const secs = timeLeft < 10 ? `0${timeLeft}` : timeLeft;
+        display.innerText = `00:${secs}`;
+
+        if (timeLeft <= 5) {
+          display.style.color = '#dc2626';
+          playSound(900, 0.05); // High warning tick
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          useSkip();
+        }
+      }, 1000);
+    }
 
     function register() {
-      teamData.persistentName = document.getElementById('persistentName').value;
-      teamData.venueName = document.getElementById('venueName').value;
+      playSound(600, 0.05);
+      teamData.persistentName = document.getElementById('persistentName').value || 'Apex Corp';
+      teamData.venueName = document.getElementById('venueName').value || 'Quick Stop';
       teamData.role = document.getElementById('role').value;
 
       socket.emit('register_team', teamData);
       document.getElementById('setup-screen').style.display = 'none';
       document.getElementById('game-screen').style.display = 'block';
 
-      // Load sample initial decision
-      renderSampleQuestion();
+      renderQuestion(0);
     }
 
-    function renderSampleQuestion() {
-      document.getElementById('question-title').innerText = "📌 School District Juice Bulk Deal";
-      document.getElementById('concept-tag').innerText = "[Concept: Price Elasticity of Demand (|Ed| > 1)]";
-      document.getElementById('question-desc').innerText = "The local school board offers to buy 500 juice boxes daily if you grant a 30% bulk discount.";
+    function renderQuestion(index) {
+      if (index >= sampleQuestions.length) {
+        clearInterval(timerInterval);
+        document.getElementById('game-screen').innerHTML = `
+          <div class="card" style="text-align: center;">
+            <h2>🎉 Round Complete!</h2>
+            <p style="color: var(--text-muted);">Check the main host screen for standings!</p>
+          </div>
+        `;
+        return;
+      }
+
+      const q = sampleQuestions[index];
+      document.getElementById('question-title').innerText = q.title;
+      document.getElementById('concept-tag').innerText = q.concept;
+      document.getElementById('question-desc').innerText = q.desc;
 
       const container = document.getElementById('options-container');
-      container.innerHTML = `
-        <button class="btn btn-action" onclick="submitChoice(0)">Accept the 30% bulk discount deal</button>
-        <button class="btn btn-action" onclick="submitChoice(1)">Reject deal to protect single-unit margin</button>
-        <button class="btn btn-action" onclick="submitChoice(2)">Counter-offer with a 10% discount</button>
-        <button class="btn btn-action" onclick="submitChoice(3)">Propose a mandatory combo bundle deal</button>
-      `;
+      container.innerHTML = '';
+
+      q.options.forEach((optText, optIdx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-action';
+        btn.innerText = optText;
+        btn.onclick = () => submitChoice(optIdx);
+        container.appendChild(btn);
+      });
+
+      startTimer(q.time, q.type);
     }
 
     function submitChoice(choiceIndex) {
+      playSound(800, 0.05);
       socket.emit('submit_solo_choice', {
         persistentName: teamData.persistentName,
-        questionId: "sample_q1",
         choiceIndex: choiceIndex,
         isHintUsed: false,
         isSkipUsed: false
       });
-      alert("Decision Submitted! Waiting for next scenario...");
+
+      currentQuestionIndex++;
+      renderQuestion(currentQuestionIndex);
     }
 
     function useHint() {
-      alert("CONCEPT HINT: When demand is price elastic (|Ed| > 1), dropping the unit price increases total revenue (R = P x Q) because sales volume rises at a higher percentage rate!");
+      playSound(500, 0.05);
+      alert("💡 CONCEPT HINT: Evaluate short-term liquidity vs. long-term interest cost!");
     }
 
     function useSkip() {
+      playSound(300, 0.1);
       socket.emit('submit_solo_choice', {
         persistentName: teamData.persistentName,
-        questionId: "sample_q1",
         choiceIndex: -1,
         isHintUsed: false,
         isSkipUsed: true
       });
-      alert("Question Skipped. -$300,000 Penalty Applied.");
+
+      currentQuestionIndex++;
+      renderQuestion(currentQuestionIndex);
     }
   </script>
 </body>
