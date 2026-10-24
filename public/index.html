@@ -4,66 +4,167 @@
   <meta charset="UTF-8">
   <title>Business Empire Championship — Host Screen</title>
   <style>
-    body { background-color: #0d1117; color: #f0f6fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
-    h1 { text-align: center; color: #58a6ff; margin-bottom: 5px; }
-    .leaderboard { width: 100%; border-collapse: collapse; margin-top: 20px; background: #161b22; border-radius: 8px; overflow: hidden; }
-    .leaderboard th, .leaderboard td { padding: 15px; text-align: left; border-bottom: 1px solid #30363d; }
-    .leaderboard th { background-color: #21262d; color: #8b949e; }
-    .stars { color: #f1e05a; font-weight: bold; }
-    .ticker-container { position: fixed; bottom: 0; left: 0; width: 100%; background: #da3633; color: white; padding: 12px; font-size: 1.2rem; font-weight: bold; }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+      margin-bottom: 5px;
+      font-size: 2.2rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 30px;
+    }
+
+    /* Kahoot-Style Leaderboard Layout */
+    .leaderboard-container {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      height: 600px;
+    }
+
+    .team-card {
+      position: absolute;
+      width: 100%;
+      height: 70px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      box-sizing: border-box;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease;
+    }
+
+    .team-card.rank-1 { background: linear-gradient(90deg, #1e293b 0%, #312e81 100%); border-color: #6366f1; }
+    .team-card.rank-2 { background: linear-gradient(90deg, #1e293b 0%, #1e3a8a 100%); border-color: #3b82f6; }
+    .team-card.rank-3 { background: linear-gradient(90deg, #1e293b 0%, #065f46 100%); border-color: #10b981; }
+
+    .rank-badge {
+      font-size: 1.5rem;
+      font-weight: 900;
+      width: 50px;
+      color: #38bdf8;
+    }
+
+    .team-info {
+      flex-grow: 1;
+    }
+
+    .team-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .venue-name {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .stat-box {
+      text-align: right;
+      margin-left: 20px;
+    }
+
+    .net-worth {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #4ade80;
+    }
+
+    .rating-stars {
+      color: #facc15;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .ticker-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #dc2626;
+      color: white;
+      padding: 14px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+    }
   </style>
 </head>
 <body>
 
   <h1>🏆 BUSINESS EMPIRE CHAMPIONSHIP</h1>
-  <p style="text-align: center; color: #8b949e;">LIVE LEADERBOARD & DISTRICT MONITOR</p>
+  <div class="subtitle">LIVE DISTRICT LEADERBOARD</div>
 
-  <table class="leaderboard">
-    <thead>
-      <tr>
-        <th>Rank</th>
-        <th>Company & Venue Name</th>
-        <th>Net Worth ($)</th>
-        <th>Goodwill Rating</th>
-        <th>Estimated Bonus</th>
-      </tr>
-    </thead>
-    <tbody id="leaderboard-body">
-      <!-- Dynamic rows inserted here -->
-    </tbody>
-  </table>
+  <div class="leaderboard-container" id="leaderboard"></div>
 
   <div class="ticker-container" id="ticker">
-    📰 LIVE TICKER: Tournament Initialization... Waiting for teams to join.
+    📰 LIVE TICKER: Tournament initialized. Waiting for team connections...
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    const container = document.getElementById('leaderboard');
+    const cardsMap = new Map();
 
     socket.on('state_update', (state) => {
-      const body = document.getElementById('leaderboard-body');
-      body.innerHTML = '';
-
-      const sortedTeams = Object.values(state.teams).sort((a, b) => (b.cash + b.assets - b.debt) - (a.cash + a.assets - a.debt));
+      const sortedTeams = Object.values(state.teams).sort((a, b) => 
+        (b.cash + b.assets - b.debt) - (a.cash + a.assets - a.debt)
+      );
 
       sortedTeams.forEach((team, index) => {
         const netWorth = team.cash + team.assets - team.debt;
-        let bonus = "$0";
-        if (team.rating >= 4.5) bonus = "+$2,000,000";
-        else if (team.rating >= 4.0) bonus = "+$1,400,000";
-        else if (team.rating >= 3.5) bonus = "+$800,000";
-        else if (team.rating >= 3.0) bonus = "+$400,000";
+        const topPos = index * 85; // Vertical offset per rank position
 
-        body.innerHTML += `
-          <tr>
-            <td>#${index + 1}</td>
-            <td><strong>${team.persistentName}</strong> (${team.venueName || 'Setup'})</td>
-            <td>$${netWorth.toLocaleString()}</td>
-            <td><span class="stars">⭐ ${team.rating.toFixed(1)}</span> / 5.0</td>
-            <td style="color: #3fb950;">${bonus}</td>
-          </tr>
-        `;
+        let card = cardsMap.get(team.persistentName);
+
+        if (!card) {
+          card = document.createElement('div');
+          card.className = `team-card rank-${index + 1}`;
+          card.innerHTML = `
+            <div class="rank-badge">#${index + 1}</div>
+            <div class="team-info">
+              <div class="team-name">${team.persistentName}</div>
+              <div class="venue-name">Operating: ${team.venueName || 'Setup Phase'}</div>
+            </div>
+            <div class="stat-box">
+              <div class="net-worth">$${netWorth.toLocaleString()}</div>
+              <div class="rating-stars">⭐ ${team.currentRating.toFixed(1)} / 5.0</div>
+            </div>
+          `;
+          container.appendChild(card);
+          cardsMap.set(team.persistentName, card);
+        } else {
+          // Update values
+          card.className = `team-card rank-${index + 1}`;
+          card.querySelector('.rank-badge').innerText = `#${index + 1}`;
+          card.querySelector('.venue-name').innerText = `Operating: ${team.venueName || 'Setup Phase'}`;
+          card.querySelector('.net-worth').innerText = `$${netWorth.toLocaleString()}`;
+          card.querySelector('.rating-stars').innerText = `⭐ ${team.currentRating.toFixed(1)} / 5.0`;
+        }
+
+        // Animated position shift
+        card.style.transform = `translateY(${topPos}px)`;
       });
     });
 
