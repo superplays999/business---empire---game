@@ -2,144 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Host Projector Screen & Admin</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>Business Empire Championship — Host Screen</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0a0e17; color: #e2e8f0; margin: 0; padding: 20px; }
-    h1 { color: #38bdf8; text-align: center; margin-bottom: 5px; }
-    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-weight: bold; }
-    .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    button { background: #0284c7; color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: transform 0.1s; }
-    button:active { transform: scale(0.95); }
-    button:hover { background: #0369a1; }
-    .level-btn { background: #059669; }
-    .level-btn:hover { background: #047857; }
-    .reset-btn { background: #ef4444; }
-    .reset-btn:hover { background: #dc2626; }
-    .surprise-btn { background: linear-gradient(135deg, #8b5cf6, #ec4899); font-size: 1.05rem; padding: 10px 22px; }
-    .surprise-btn:hover { opacity: 0.9; }
-    .leaderboard { max-width: 900px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .team-card { background: #0f172a; border-left: 5px solid #38bdf8; padding: 15px; margin-bottom: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-    .team-title { font-size: 1.2rem; font-weight: bold; color: #f8fafc; }
-    .venue-name { font-size: 0.9rem; color: #38bdf8; font-style: italic; }
-    .net-worth { font-size: 1.4rem; font-weight: bold; color: #4ade80; }
-    .formula { font-size: 0.8rem; color: #94a3b8; margin-top: 5px; }
-    .danger-line { border-top: 2px dashed #f43f5e; text-align: center; color: #f43f5e; font-weight: bold; padding: 10px 0; margin: 15px 0; }
-    
-    /* Surprise Modal Popup (Text only, no images) */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-card { background: #1e293b; border: 3px solid #ec4899; border-radius: 16px; width: 90%; max-width: 600px; text-align: center; padding: 30px; box-shadow: 0 0 35px rgba(236, 72, 153, 0.5); animation: popIn 0.4s ease-out; }
-    @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .modal-title { font-size: 1.8rem; color: #f43f5e; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; }
-    .modal-desc { font-size: 1.2rem; color: #f8fafc; line-height: 1.6; margin-bottom: 25px; }
+    body { background-color: #0d1117; color: #f0f6fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #58a6ff; margin-bottom: 5px; }
+    .leaderboard { width: 100%; border-collapse: collapse; margin-top: 20px; background: #161b22; border-radius: 8px; overflow: hidden; }
+    .leaderboard th, .leaderboard td { padding: 15px; text-align: left; border-bottom: 1px solid #30363d; }
+    .leaderboard th { background-color: #21262d; color: #8b949e; }
+    .stars { color: #f1e05a; font-weight: bold; }
+    .ticker-container { position: fixed; bottom: 0; left: 0; width: 100%; background: #da3633; color: white; padding: 12px; font-size: 1.2rem; font-weight: bold; }
   </style>
 </head>
 <body>
+
   <h1>🏆 BUSINESS EMPIRE CHAMPIONSHIP</h1>
-  <div class="subtitle" id="gameHeader">LEVEL 1: CONVENIENCE STORE | DAY 1 / 30</div>
+  <p style="text-align: center; color: #8b949e;">LIVE LEADERBOARD & DISTRICT MONITOR</p>
 
-  <div class="controls">
-    <button onclick="advanceDay()">⏩ Advance Day</button>
-    <button class="level-btn" onclick="setLevel(1)">🏪 Set L1 (Store)</button>
-    <button class="level-btn" onclick="setLevel(2)">🍽️ Set L2 (Restaurant)</button>
-    <button class="level-btn" onclick="setLevel(3)">🏨 Set L3 (Hotel)</button>
-    <button class="surprise-btn" onclick="triggerSurprise()">🎲 SURPRISE EVENT!</button>
-    <button class="reset-btn" onclick="resetGame()">🔄 Reset Game</button>
+  <table class="leaderboard">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Company & Venue Name</th>
+        <th>Net Worth ($)</th>
+        <th>Goodwill Rating</th>
+        <th>Estimated Bonus</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard-body">
+      <!-- Dynamic rows inserted here -->
+    </tbody>
+  </table>
+
+  <div class="ticker-container" id="ticker">
+    📰 LIVE TICKER: Tournament Initialization... Waiting for teams to join.
   </div>
 
-  <div class="leaderboard" id="leaderboardList">
-    <div style="text-align: center; color: #64748b;">Waiting for teams to join...</div>
-  </div>
-
-  <!-- Surprise Overlay -->
-  <div class="modal-overlay" id="cameoModal">
-    <div class="modal-card">
-      <div id="modalTitle" class="modal-title">SURPRISE EVENT</div>
-      <div id="modalDesc" class="modal-desc">Event details loading...</div>
-      <button style="background: #ec4899; font-size: 1.1rem; padding: 12px 24px;" onclick="closeModal()">Got It! Return to Game</button>
-    </div>
-  </div>
-
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
 
-    function playClickSound() {
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.08);
-      } catch(e){}
-    }
+    socket.on('state_update', (state) => {
+      const body = document.getElementById('leaderboard-body');
+      body.innerHTML = '';
 
-    const levelTitles = {
-      1: "LEVEL 1: CONVENIENCE STORE",
-      2: "LEVEL 2: FINE-DINING RESTAURANT",
-      3: "LEVEL 3: LUXURY HOTEL & RESORT"
-    };
+      const sortedTeams = Object.values(state.teams).sort((a, b) => (b.cash + b.assets - b.debt) - (a.cash + a.assets - a.debt));
 
-    socket.on('stateUpdate', (state) => {
-      const levelText = levelTitles[state.currentLevel] || `LEVEL ${state.currentLevel}`;
-      document.getElementById('gameHeader').innerText = `${levelText} | DAY ${state.simulatedDay} / ${state.maxDays}`;
-      
-      const teamsArr = Object.values(state.teams).sort((a, b) => b.netWorth - a.netWorth);
-      const listEl = document.getElementById('leaderboardList');
-      listEl.innerHTML = '';
+      sortedTeams.forEach((team, index) => {
+        const netWorth = team.cash + team.assets - team.debt;
+        let bonus = "$0";
+        if (team.rating >= 4.5) bonus = "+$2,000,000";
+        else if (team.rating >= 4.0) bonus = "+$1,400,000";
+        else if (team.rating >= 3.5) bonus = "+$800,000";
+        else if (team.rating >= 3.0) bonus = "+$400,000";
 
-      if (teamsArr.length === 0) {
-        listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No teams connected yet. Scan QR code to join!</div>';
-        return;
-      }
-
-      const cutoffIndex = Math.ceil(teamsArr.length * 0.8);
-
-      teamsArr.forEach((team, index) => {
-        if (index === cutoffIndex && teamsArr.length > 2) {
-          const danger = document.createElement('div');
-          danger.className = 'danger-line';
-          danger.innerText = '⚠️ ELIMINATION CUTOFF LINE ⚠️';
-          listEl.appendChild(danger);
-        }
-
-        const card = document.createElement('div');
-        card.className = 'team-card';
-        card.style.borderColor = index >= cutoffIndex ? '#f43f5e' : '#38bdf8';
-        card.innerHTML = `
-          <div>
-            <div class="team-title">#${index + 1} ${team.groupName}</div>
-            <div class="venue-name">"${team.venueName}" (Option ${team.startingOption})</div>
-            <div class="formula">Net Worth = Cash ($${team.cash.toLocaleString()}) + Valuation ($${team.inventory.toLocaleString()}) - Debt ($${team.debt.toLocaleString()})</div>
-          </div>
-          <div class="net-worth">$${team.netWorth.toLocaleString()}</div>
+        body.innerHTML += `
+          <tr>
+            <td>#${index + 1}</td>
+            <td><strong>${team.persistentName}</strong> (${team.venueName || 'Setup'})</td>
+            <td>$${netWorth.toLocaleString()}</td>
+            <td><span class="stars">⭐ ${team.rating.toFixed(1)}</span> / 5.0</td>
+            <td style="color: #3fb950;">${bonus}</td>
+          </tr>
         `;
-        listEl.appendChild(card);
       });
     });
 
-    socket.on('cameoEvent', (eventData) => {
-      document.getElementById('modalTitle').innerText = eventData.title;
-      document.getElementById('modalDesc').innerText = eventData.desc;
-      document.getElementById('cameoModal').style.display = 'flex';
+    socket.on('host_news_ticker', (msg) => {
+      document.getElementById('ticker').innerText = `📰 LIVE TICKER: ${msg}`;
     });
-
-    function advanceDay() { playClickSound(); socket.emit('advanceDay'); }
-    function setLevel(lvl) { playClickSound(); socket.emit('setLevel', lvl); }
-    function triggerSurprise() { playClickSound(); socket.emit('triggerRandomCameo'); }
-    function closeModal() { playClickSound(); document.getElementById('cameoModal').style.display = 'none'; }
-    function resetGame() {
-      playClickSound();
-      if (confirm("Are you sure you want to reset the game back to Day 1 and clear all teams?")) {
-        socket.emit('resetGame');
-      }
-    }
   </script>
 </body>
 </html>
